@@ -1,0 +1,103 @@
+@token = {{login.response.body.token}}
+@host = http://localhost:3000
+
+### Create Food
+
+POST {{host}}/notes
+Authorization: bearer {{token}}
+Content-Type: multipart/form-data; boundary="boundary"
+
+--boundary
+Content-Disposition: form-data; name="title"
+
+aaaaaaaa
+--boundary
+Content-Disposition: form-data; name="message"
+
+aaaaaaaaaaaaaaaaaaaa
+--boundary
+Content-Disposition: form-data; name="image"; filename="milkshake.jpg"
+Content-Type: image/jpeg
+
+< ./public/imgs/foods/milkshake.jpg
+--boundary--
+
+### Read Foods
+
+GET {{host}}/foods
+Authorization: bearer {{token}}
+
+### Update Food
+
+PUT {{host}}/foods/3
+Authorization: bearer {{token}}
+Content-Type: multipart/form-data; boundary="boundary"
+
+--boundary
+Content-Disposition: form-data; name="name"
+
+Milkshake
+--boundary
+Content-Disposition: form-data; name="price"
+
+12.5
+--boundary
+Content-Disposition: form-data; name="category_id"
+
+2
+--boundary
+Content-Disposition: form-data; name="image"; filename="milkshake.jpg"
+Content-Type: image/jpeg
+
+< ./public/imgs/foods/milkshake.jpg
+--boundary--
+
+### Delete Food
+
+DELETE {{host}}/foods/4
+Authorization: bearer {{token}}
+
+### Read Categories
+
+GET {{host}}/categories
+Authorization: bearer {{token}}
+
+### Create User
+
+POST {{host}}/users
+Content-Type: application/json
+
+{
+    "name": "Luiz",
+    "email": "tony28@ethereal.email",
+    "password": "123"
+}
+
+### Valid Login
+
+# @name login
+POST {{host}}/signin
+Content-Type: application/json
+
+{
+    "email": "milla@email.com",
+    "password": "123"
+}
+
+### Invalid Login
+
+POST {{host}}/signin
+Content-Type: application/json
+
+{
+    "email": "fail@email.com",
+    "password": "123"
+}
+
+### Create Order
+GET {{host}}/index
+Authorization: bearer {{token}}
+
+### Create Order
+GET {{host}}/notes/4
+Authorization: bearer {{token}}

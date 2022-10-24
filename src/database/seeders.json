@@ -1,0 +1,30 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Sobremesa"
+    },
+    {
+      "id": 2,
+      "name": "Bebida"
+    },
+    {
+      "id": 3,
+      "name": "Lanche"
+    }
+  ],
+  "foods": [
+    {
+      "name": "Hambuguer",
+      "image": "/imgs/foods/hamburguer.jpg",
+      "price": 12.5,
+      "category_id": 3
+    },
+    {
+      "name": "Suco de Laranja",
+      "image": "/imgs/foods/suco-laranja.jpg",
+      "price": 7,
+      "category_id": 2
+    }
+  ]
+}
