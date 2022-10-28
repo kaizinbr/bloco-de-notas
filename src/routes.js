@@ -2,6 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
+import { celebrate, Joi, errors, Segments } from 'celebrate';
 
 import uploadConfig from './config/multer.js';
 import Category from './models/Category.js';
@@ -18,6 +19,14 @@ import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 
 const __dirname = path.dirname(__filename);
+
+
+class AppError extends Error {
+  constructor(message, statusCode = 400) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
 
 
 const router = Router();
@@ -44,10 +53,18 @@ router.post(
   '/notes',
   isAuthenticated,
   multer(uploadConfig).single('image'),
+  celebrate({
+    [Segments.BODY]: Joi.object().keys({
+      title: Joi.string().required(),
+      message: Joi.string(),
+    }),
+  }),
   async (req, res) => {
     try {
       const note = req.body;
       c.log(note)
+      
+      c.log('body', req.body);
 
       const image = req.file
         ? `/imgs/foods/${req.file.filename}`
@@ -66,6 +83,12 @@ router.put(
   '/notes/:id',
   isAuthenticated,
   multer(uploadConfig).single('image'),
+  celebrate({
+    [Segments.BODY]: Joi.object().keys({
+      title: Joi.string().required(),
+      message: Joi.string(),
+    }),
+  }),
   async (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -78,15 +101,19 @@ router.put(
         ? `/imgs/foods/${req.file.filename}`
         : oldImage;
 
-      const newFood = await Note.update({ ...note, image }, id);
+      const newNote = await Note.update({ ...note, image }, id);
 
-      if (newFood) {
-        res.json(newFood);
+      if (newNote) {
+        res.json(newNote);
       } else {
-        res.status(400).json({ error: 'Food not found.' });
+        throw new AppError('Note not found.');
       }
     } catch (error) {
-      throw new Error('Error in update food');
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw new AppError('Error in update note');
     }
   }
 );
@@ -104,8 +131,6 @@ router.delete('/notes/:id', isAuthenticated, async (req, res) => {
     throw new Error('Error in delete food');
   }
 });
-
-// router.get('/notes', (req, res) => res.redirect('/new-note.html'));
 
 router.get('/notes', async (req, res) => {
   res.sendFile(path.join(__dirname, '/../public/edit-note.html'));
@@ -135,19 +160,38 @@ router.get('/categories', isAuthenticated, async (req, res) => {
   }
 });
 
-router.post('/users', async (req, res) => {
-  try {
-    const user = req.body;    
+router.post(
+  '/users',
+  celebrate({
+    [Segments.BODY]: Joi.object().keys({
+      name: Joi.string().required(),
+      email: Joi.string().email(),
+      password: Joi.string().min(8),      
+      confirmation_password: Joi.string().min(8),
+    }),
+  }),
+  async (req, res) => {
+    try {
+      const user = req.body;
 
-    const newUser = await User.create(user);
-    console.log(newUser)
-    await SendMail.createNewUser(user.email);
+      const newUser = await User.create(user);
 
-    res.json(newUser);
-  } catch (error) {
-    throw new Error('Error in create user');
+      await SendMail.createNewUser(user.email);
+
+      res.json(newUser);
+    } catch (error) {
+      if (
+        error.message.includes(
+          'SQLITE_CONSTRAINT: UNIQUE constraint failed: users.email'
+        )
+      ) {
+        throw new AppError('Email already exists');
+      } else {
+        throw new AppError('Error in create user');
+      }
+    }
   }
-});
+);
 
 router.post('/signin', async (req, res) => {
   try {
@@ -156,7 +200,7 @@ router.post('/signin', async (req, res) => {
     const user = await User.readByEmail(email);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error();
     }
 
     const { id: userId, password: hash } = user;
@@ -172,10 +216,10 @@ router.post('/signin', async (req, res) => {
 
       res.json({ auth: true, token });
     } else {
-      throw new Error('User not found');
+      throw new Error();
     }
   } catch (error) {
-    res.status(401).json({ error: 'User not found' });
+    throw new AppError('User not found', 401);
   }
 });
 
@@ -185,12 +229,16 @@ router.use(function (req, res, next) {
   });
 });
 
+router.use(errors());
+
 router.use(function (error, req, res, next) {
   console.error(error.stack);
 
-  res.status(500).json({
-    message: 'Something broke!',
-  });
+  if (error instanceof AppError) {
+    res.status(error.statusCode).json({ error: error.message });
+  } else {
+    res.status(500).json({ message: 'Something broke!' });
+  }
 });
 
 
